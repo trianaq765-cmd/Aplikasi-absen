@@ -29,7 +29,7 @@
                     <input type="password" id="password" placeholder="Masukkan password" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
                     <i class="fas fa-sign-in-alt"></i> Masuk
                 </button>
             </form>
@@ -37,9 +37,13 @@
             <div class="demo-accounts">
                 <p>Akun Demo:</p>
                 <div class="demo-buttons">
-                    <button onclick="fillDemo('admin')" class="btn btn-outline btn-sm">Admin</button>
-                    <button onclick="fillDemo('employee')" class="btn btn-outline btn-sm">Karyawan</button>
+                    <button type="button" onclick="fillDemo('admin')" class="btn btn-outline btn-sm">Admin</button>
+                    <button type="button" onclick="fillDemo('employee')" class="btn btn-outline btn-sm">Karyawan</button>
                 </div>
+            </div>
+            
+            <div class="login-footer" style="margin-top: 20px; text-align: center; font-size: 0.8rem; color: var(--gray-400);">
+                <p>© 2025 Sistem Absensi Karyawan</p>
             </div>
         </div>
     </div>
@@ -49,10 +53,19 @@
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        if (getToken()) {
-            window.location.href = 'dashboard.html';
-        }
+        // Check if already logged in IMMEDIATELY
+        (function() {
+            const token = localStorage.getItem('absensi_token');
+            console.log('[Login Page] Token check:', token ? 'exists' : 'none');
+            
+            if (token) {
+                console.log('[Login Page] Already logged in, redirecting...');
+                window.location.replace('dashboard.html');
+                return;
+            }
+        })();
 
+        // Fill demo account
         function fillDemo(type) {
             const accounts = {
                 admin: { email: 'admin@contoh.co.id', password: 'admin123' },
@@ -62,26 +75,64 @@
             document.getElementById('password').value = accounts[type].password;
         }
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // Handle login form
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            
+            if (!email || !password) {
+                showToast('Email dan password harus diisi', 'error');
+                return;
+            }
+            
+            // Disable button
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
             
-            const result = await login(
-                document.getElementById('email').value,
-                document.getElementById('password').value
-            );
+            console.log('[Login Page] Submitting login...');
             
-            if (result.success) {
-                showToast('Login berhasil!', 'success');
-                setTimeout(() => window.location.href = 'dashboard.html', 1000);
-            } else {
-                showToast(result.message || 'Login gagal', 'error');
+            try {
+                const result = await login(email, password);
+                
+                console.log('[Login Page] Login result:', result);
+                
+                if (result.success) {
+                    showToast('Login berhasil! Mengalihkan...', 'success');
+                    
+                    // Verify token is saved before redirect
+                    const token = localStorage.getItem('absensi_token');
+                    console.log('[Login Page] Token after login:', token ? 'saved' : 'NOT SAVED');
+                    
+                    if (token) {
+                        // Use replace to prevent back button issues
+                        setTimeout(function() {
+                            console.log('[Login Page] Redirecting to dashboard...');
+                            window.location.replace('dashboard.html');
+                        }, 1000);
+                    } else {
+                        showToast('Error: Token tidak tersimpan', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk';
+                    }
+                    
+                } else {
+                    showToast(result.message || 'Login gagal', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk';
+                }
+                
+            } catch (error) {
+                console.error('[Login Page] Error:', error);
+                showToast('Terjadi kesalahan', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk';
             }
         });
+        
+        console.log('[Login Page] Ready');
     </script>
 </body>
 </html>
