@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuti & Izin - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Absensi</span>
+                </div>
+                <button class="sidebar-close" onclick="toggleSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="attendance.html"><i class="fas fa-clock"></i><span>Absensi</span></a></li>
+                    <li class="active"><a href="leave.html"><i class="fas fa-calendar-alt"></i><span>Cuti & Izin</span></a></li>
+                    <li><a href="history.html"><i class="fas fa-history"></i><span>Riwayat</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1>Cuti & Izin</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openLeaveModal()">
+                        <i class="fas fa-plus"></i>
+                        <span>Ajukan Cuti</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- Leave Balance -->
+                <div class="leave-balance-card card">
+                    <h3><i class="fas fa-calendar-check"></i> Saldo Cuti Tahun 2025</h3>
+                    <div class="balance-grid">
+                        <div class="balance-item">
+                            <div class="balance-circle">
+                                <svg viewBox="0 0 36 36">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path class="circle-progress" id="balanceProgress" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                </svg>
+                                <span class="balance-number" id="balanceRemaining">12</span>
+                            </div>
+                            <p>Sisa Cuti</p>
+                        </div>
+                        <div class="balance-details">
+                            <div class="detail-row">
+                                <span>Jatah Tahunan</span>
+                                <strong id="balanceQuota">12 hari</strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Sudah Digunakan</span>
+                                <strong id="balanceUsed">0 hari</strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Menunggu Approval</span>
+                                <strong id="balancePending">0 hari</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leave Types Info -->
+                <div class="card">
+                    <h3><i class="fas fa-info-circle"></i> Jenis Cuti (Sesuai UU Ketenagakerjaan)</h3>
+                    <div class="leave-types-grid" id="leaveTypesGrid">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- My Leave Requests -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-list"></i> Pengajuan Saya</h3>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-status="all">Semua</button>
+                            <button class="filter-tab" data-status="pending">Menunggu</button>
+                            <button class="filter-tab" data-status="approved">Disetujui</button>
+                            <button class="filter-tab" data-status="rejected">Ditolak</button>
+                        </div>
+                    </div>
+                    <div class="leave-list" id="leaveList">
+                        <div class="loading-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Memuat data...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leave Request Modal -->
+    <div class="modal" id="leaveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-plus"></i> Ajukan Cuti/Izin</h3>
+                <button class="modal-close" onclick="closeLeaveModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="leaveForm" class="modal-body">
+                <div class="form-group">
+                    <label for="leaveType">Jenis Cuti *</label>
+                    <select id="leaveType" name="leave_type" required>
+                        <option value="">Pilih jenis cuti...</option>
+                        <option value="annual">Cuti Tahunan</option>
+                        <option value="sick">Sakit</option>
+                        <option value="marriage">Cuti Menikah</option>
+                        <option value="maternity">Cuti Melahirkan</option>
+                        <option value="paternity">Cuti Ayah</option>
+                        <option value="bereavement_spouse">Duka (Suami/Istri/Anak/Ortu)</option>
+                        <option value="bereavement_family">Duka (Keluarga Lain)</option>
+                        <option value="hajj">Ibadah Haji</option>
+                        <option value="unpaid">Cuti Tanpa Gaji</option>
+                        <option value="other">Izin Lainnya</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">Tanggal Mulai *</label>
+                        <input type="date" id="startDate" name="start_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">Tanggal Selesai *</label>
+                        <input type="date" id="endDate" name="end_date" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Total Hari: <strong id="totalDays">0</strong> hari kerja</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Alasan/Keterangan *</label>
+                    <textarea id="reason" name="reason" rows="3" placeholder="Jelaskan alasan pengajuan cuti..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="attachment">Lampiran (opsional)</label>
+                    <input type="file" id="attachment" name="attachment" accept=".pdf,.jpg,.jpeg,.png">
+                    <small>Format: PDF, JPG, PNG. Maks 5MB</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeLeaveModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Ajukan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/leave.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initLeavePage();
+        });
+    </script>
+</body>
+  </html>
