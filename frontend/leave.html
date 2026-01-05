@@ -8,10 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+    <!-- Check auth IMMEDIATELY -->
+    <script>
+        (function() {
+            if (!localStorage.getItem('absensi_token')) {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
+
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo"><i class="fas fa-fingerprint"></i><span>Absensi</span></div>
+                <button class="sidebar-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -21,7 +31,7 @@
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+                <a href="#" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
             </div>
         </aside>
 
@@ -39,26 +49,26 @@
             <div class="content">
                 <div class="card">
                     <h3><i class="fas fa-calendar-check"></i> Saldo Cuti 2025</h3>
-                    <div class="balance-info">
-                        <div class="balance-item">
-                            <span class="balance-label">Jatah Tahunan</span>
-                            <span class="balance-value" id="balanceQuota">12 hari</span>
+                    <div class="balance-info" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div class="balance-item" style="flex: 1; min-width: 120px; padding: 15px; background: var(--gray-50); border-radius: 8px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: var(--gray-500);">Jatah Tahunan</span>
+                            <span id="balanceQuota" style="font-size: 1.25rem; font-weight: 700;">12 hari</span>
                         </div>
-                        <div class="balance-item">
-                            <span class="balance-label">Terpakai</span>
-                            <span class="balance-value" id="balanceUsed">0 hari</span>
+                        <div class="balance-item" style="flex: 1; min-width: 120px; padding: 15px; background: var(--gray-50); border-radius: 8px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: var(--gray-500);">Terpakai</span>
+                            <span id="balanceUsed" style="font-size: 1.25rem; font-weight: 700;">0 hari</span>
                         </div>
-                        <div class="balance-item highlight">
-                            <span class="balance-label">Sisa</span>
-                            <span class="balance-value" id="balanceRemaining">12 hari</span>
+                        <div class="balance-item" style="flex: 1; min-width: 120px; padding: 15px; background: var(--success-light); border-radius: 8px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: var(--gray-500);">Sisa</span>
+                            <span id="balanceRemaining" style="font-size: 1.25rem; font-weight: 700; color: var(--success);">12 hari</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card">
                     <h3><i class="fas fa-list"></i> Pengajuan Saya</h3>
-                    <div id="leaveList" class="leave-list">
-                        <p>Memuat data...</p>
+                    <div id="leaveList" class="leave-list" style="min-height: 150px;">
+                        <p style="text-align: center; color: var(--gray-400);"><i class="fas fa-spinner fa-spin"></i> Memuat...</p>
                     </div>
                 </div>
             </div>
@@ -96,7 +106,7 @@
                 </div>
                 <div class="form-group">
                     <label>Alasan *</label>
-                    <textarea id="reason" rows="3" required></textarea>
+                    <textarea id="reason" rows="3" placeholder="Jelaskan alasan cuti..." required></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" onclick="closeLeaveModal()">Batal</button>
@@ -112,8 +122,12 @@
     <script src="js/auth.js"></script>
     <script src="js/leave.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('absensi_token')) {
+                window.location.replace('index.html');
+                return;
+            }
+            loadUserHeader();
             initLeavePage();
         });
     </script>
