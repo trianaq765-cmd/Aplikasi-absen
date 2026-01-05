@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (same as dashboard) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Absensi</span>
+                </div>
+                <button class="sidebar-close" onclick="toggleSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li class="active"><a href="attendance.html"><i class="fas fa-clock"></i><span>Absensi</span></a></li>
+                    <li><a href="leave.html"><i class="fas fa-calendar-alt"></i><span>Cuti & Izin</span></a></li>
+                    <li><a href="history.html"><i class="fas fa-history"></i><span>Riwayat</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1>Absensi</h1>
+                    <p id="currentDate"></p>
+                </div>
+                <div class="header-actions">
+                    <div class="user-info" onclick="toggleUserMenu()">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <span class="user-name" id="userName">Loading...</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- Current Time -->
+                <div class="time-display card">
+                    <div class="big-clock" id="bigClock">00:00:00</div>
+                    <p class="date-display" id="dateDisplay">Senin, 1 Januari 2025</p>
+                    <span class="timezone-badge">Waktu Indonesia Barat (WIB)</span>
+                </div>
+
+                <!-- Today's Status -->
+                <div class="attendance-today card">
+                    <h3><i class="fas fa-calendar-day"></i> Status Hari Ini</h3>
+                    <div class="attendance-times" id="attendanceTimes">
+                        <div class="time-slot">
+                            <div class="time-icon clock-in">
+                                <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <div class="time-info">
+                                <span class="time-label">Masuk</span>
+                                <span class="time-value" id="clockInTime">--:--</span>
+                            </div>
+                        </div>
+                        <div class="time-divider">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="time-slot">
+                            <div class="time-icon clock-out">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </div>
+                            <div class="time-info">
+                                <span class="time-label">Pulang</span>
+                                <span class="time-value" id="clockOutTime">--:--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="attendance-note" id="attendanceNote"></div>
+                </div>
+
+                <!-- Attendance Methods -->
+                <div class="attendance-methods">
+                    <h3><i class="fas fa-hand-pointer"></i> Pilih Metode Absensi</h3>
+                    
+                    <div class="method-tabs">
+                        <button class="method-tab active" data-method="gps">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>GPS</span>
+                        </button>
+                        <button class="method-tab" data-method="qr">
+                            <i class="fas fa-qrcode"></i>
+                            <span>QR Code</span>
+                        </button>
+                        <button class="method-tab" data-method="face">
+                            <i class="fas fa-camera"></i>
+                            <span>Wajah</span>
+                        </button>
+                    </div>
+
+                    <!-- GPS Method -->
+                    <div class="method-content active" id="method-gps">
+                        <div class="card">
+                            <h4><i class="fas fa-map-marker-alt"></i> Absensi dengan Lokasi GPS</h4>
+                            
+                            <div class="location-info" id="locationInfo">
+                                <div class="location-loading">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Mendapatkan lokasi...</p>
+                                </div>
+                            </div>
+
+                            <div class="work-type-selector">
+                                <label>Tipe Kerja:</label>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="workType" value="wfo" checked>
+                                        <span><i class="fas fa-building"></i> WFO (Kantor)</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="workType" value="wfh">
+                                        <span><i class="fas fa-home"></i> WFH (Rumah)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="attendance-buttons">
+                                <button class="btn btn-success btn-lg" id="btnClockIn" onclick="clockIn('gps')">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                    Absen Masuk
+                                </button>
+                                <button class="btn btn-danger btn-lg" id="btnClockOut" onclick="clockOut('gps')" style="display:none;">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Absen Pulang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Method -->
+                    <div class="method-content" id="method-qr">
+                        <div class="card">
+                            <h4><i class="fas fa-qrcode"></i> Absensi dengan QR Code</h4>
+                            
+                            <div class="qr-options">
+                                <button class="btn btn-primary" onclick="showMyQR()">
+                                    <i class="fas fa-qrcode"></i>
+                                    Tampilkan QR Saya
+                                </button>
+                                <button class="btn btn-outline" onclick="scanQR()">
+                                    <i class="fas fa-camera"></i>
+                                    Scan QR
+                                </button>
+                            </div>
+
+                            <div class="qr-display" id="qrDisplay" style="display:none;">
+                                <img id="qrImage" src="" alt="QR Code">
+                                <p>Tunjukkan QR ini ke petugas</p>
+                                <p class="qr-validity">Berlaku untuk: <span id="qrDate"></span></p>
+                            </div>
+
+                            <div class="qr-scanner" id="qrScanner" style="display:none;">
+                                <video id="qrVideo" autoplay playsinline></video>
+                                <button class="btn btn-danger" onclick="stopScanner()">
+                                    <i class="fas fa-times"></i> Tutup Scanner
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Face Method -->
+                    <div class="method-content" id="method-face">
+                        <div class="card">
+                            <h4><i class="fas fa-camera"></i> Absensi dengan Pengenalan Wajah</h4>
+                            
+                            <div class="camera-container">
+                                <video id="cameraFeed" autoplay playsinline></video>
+                                <canvas id="cameraCanvas" style="display:none;"></canvas>
+                                <div class="camera-overlay">
+                                    <div class="face-guide"></div>
+                                </div>
+                            </div>
+
+                            <div class="camera-controls">
+                                <button class="btn btn-primary" id="btnStartCamera" onclick="startCamera()">
+                                    <i class="fas fa-video"></i>
+                                    Mulai Kamera
+                                </button>
+                                <button class="btn btn-success" id="btnCapture" onclick="captureAndAttend()" style="display:none;">
+                                    <i class="fas fa-camera"></i>
+                                    Ambil Foto & Absen
+                                </button>
+                                <button class="btn btn-outline" id="btnStopCamera" onclick="stopCamera()" style="display:none;">
+                                    <i class="fas fa-times"></i>
+                                    Tutup Kamera
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance History Preview -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Riwayat Minggu Ini</h3>
+                    </div>
+                    <div class="week-history" id="weekHistory">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/attendance.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initAttendancePage();
+        });
+    </script>
+</body>
+</html>
