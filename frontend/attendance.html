@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><i class="fas fa-fingerprint"></i><span>Absensi</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li class="active"><a href="attendance.html"><i class="fas fa-clock"></i><span>Absensi</span></a></li>
+                    <li><a href="leave.html"><i class="fas fa-calendar-alt"></i><span>Cuti</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <div class="header-title">
+                    <h1>Absensi</h1>
+                    <p id="currentDate"></p>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="time-display card">
+                    <div class="big-clock" id="bigClock">00:00:00</div>
+                    <p id="dateDisplay"></p>
+                    <span class="timezone-badge">Waktu Indonesia Barat (WIB)</span>
+                </div>
+
+                <div class="attendance-today card">
+                    <h3><i class="fas fa-calendar-day"></i> Status Hari Ini</h3>
+                    <div class="attendance-times">
+                        <div class="time-slot">
+                            <div class="time-icon clock-in"><i class="fas fa-sign-in-alt"></i></div>
+                            <div class="time-info">
+                                <span class="time-label">Masuk</span>
+                                <span class="time-value" id="clockInTime">--:--</span>
+                            </div>
+                        </div>
+                        <div class="time-divider"><i class="fas fa-arrow-right"></i></div>
+                        <div class="time-slot">
+                            <div class="time-icon clock-out"><i class="fas fa-sign-out-alt"></i></div>
+                            <div class="time-info">
+                                <span class="time-label">Pulang</span>
+                                <span class="time-value" id="clockOutTime">--:--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="attendanceNote" class="attendance-note"></div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-map-marker-alt"></i> Absensi dengan GPS</h3>
+                    <div id="locationInfo" class="location-info">
+                        <div class="location-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Mendapatkan lokasi...</p>
+                        </div>
+                    </div>
+
+                    <div class="work-type-selector">
+                        <label>Tipe Kerja:</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="workType" value="wfo" checked>
+                                <span><i class="fas fa-building"></i> WFO</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="workType" value="wfh">
+                                <span><i class="fas fa-home"></i> WFH</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="attendance-buttons">
+                        <button class="btn btn-success btn-lg" id="btnClockIn" onclick="clockIn('gps')">
+                            <i class="fas fa-sign-in-alt"></i> Absen Masuk
+                        </button>
+                        <button class="btn btn-danger btn-lg" id="btnClockOut" onclick="clockOut('gps')" style="display:none;">
+                            <i class="fas fa-sign-out-alt"></i> Absen Pulang
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/attendance.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initAttendancePage();
+        });
+    </script>
+</body>
+</html>
