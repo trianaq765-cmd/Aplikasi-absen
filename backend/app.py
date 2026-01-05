@@ -1,210 +1,241 @@
 """
 Sistem Absensi Karyawan 2025
-Main Application Entry Point - Production Ready
-
-Features:
-- Absensi via GPS, QR Code, Face Recognition
-- Manajemen Cuti sesuai UU Ketenagakerjaan
-- Laporan & Export Excel
-- Multi-tenant & Multi-cabang
-
-Author: AI Assistant
-Version: 1.0.0
+Main Application - With Debug
 """
 
 import os
+import sys
 import logging
+import traceback
 from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_migrate import Migrate
 from datetime import datetime
 
-# Configure logging
+# Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
 )
 logger = logging.getLogger(__name__)
 
-# Import config and models
-from config import config
-from models import db, Company, Department, Employee, OfficeLocation, LeaveBalance
+# Log startup
+logger.info("="*50)
+logger.info("Starting Sistem Absensi Karyawan 2025")
+logger.info("="*50)
 
-# Import routes
-from routes import auth_bp, attendance_bp, leave_bp, reports_bp, employee_bp
-from routes.auth import *
-from routes.attendance import *
-from routes.leave import *
-from routes.reports import *
-from routes.employee import *
+# Try importing config
+try:
+    from config import config
+    logger.info("✓ Config imported successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to import config: {e}")
+    traceback.print_exc()
+
+# Try importing models
+try:
+    from models import db, Company, Department, Employee, OfficeLocation, LeaveBalance
+    logger.info("✓ Models imported successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to import models: {e}")
+    traceback.print_exc()
+
+# Try importing routes
+try:
+    from routes import auth_bp, attendance_bp, leave_bp, reports_bp, employee_bp
+    logger.info("✓ Route blueprints imported successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to import routes: {e}")
+    traceback.print_exc()
+
+# Import route handlers
+try:
+    from routes.auth import *
+    logger.info("✓ Auth routes imported")
+except Exception as e:
+    logger.error(f"✗ Failed to import auth routes: {e}")
+    traceback.print_exc()
+
+try:
+    from routes.attendance import *
+    logger.info("✓ Attendance routes imported")
+except Exception as e:
+    logger.error(f"✗ Failed to import attendance routes: {e}")
+    traceback.print_exc()
+
+try:
+    from routes.leave import *
+    logger.info("✓ Leave routes imported")
+except Exception as e:
+    logger.error(f"✗ Failed to import leave routes: {e}")
+    traceback.print_exc()
+
+try:
+    from routes.reports import *
+    logger.info("✓ Reports routes imported")
+except Exception as e:
+    logger.error(f"✗ Failed to import reports routes: {e}")
+    traceback.print_exc()
+
+try:
+    from routes.employee import *
+    logger.info("✓ Employee routes imported")
+except Exception as e:
+    logger.error(f"✗ Failed to import employee routes: {e}")
+    traceback.print_exc()
 
 # Initialize extensions
-migrate = Migrate()
 jwt = JWTManager()
 
 
 def create_app(config_name=None):
-    """Application factory pattern"""
+    """Application factory"""
     
     if config_name is None:
         config_name = os.getenv('FLASK_ENV', 'production')
     
-    # Determine static folder path
-    # In production, frontend is served from same directory
+    logger.info(f"Creating app with config: {config_name}")
+    
+    # Get paths
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     static_folder = os.path.join(base_dir, 'frontend')
     
-    app = Flask(__name__, 
-                static_folder=static_folder, 
-                static_url_path='')
+    logger.info(f"Base dir: {base_dir}")
+    logger.info(f"Static folder: {static_folder}")
+    logger.info(f"Static folder exists: {os.path.exists(static_folder)}")
+    
+    app = Flask(__name__, static_folder=static_folder, static_url_path='')
     
     # Load config
-    app.config.from_object(config[config_name])
+    try:
+        app.config.from_object(config[config_name])
+        logger.info("✓ Config loaded")
+    except Exception as e:
+        logger.error(f"✗ Failed to load config: {e}")
+        # Use default config
+        app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret')
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///absensi.db')
+        if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+            app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret')
+    
+    logger.info(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')[:50]}...")
     
     # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
+    try:
+        db.init_app(app)
+        logger.info("✓ Database initialized")
+    except Exception as e:
+        logger.error(f"✗ Failed to init database: {e}")
     
-    # Configure CORS
-    CORS(app, 
-         origins=["*"],
-         supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    try:
+        jwt.init_app(app)
+        logger.info("✓ JWT initialized")
+    except Exception as e:
+        logger.error(f"✗ Failed to init JWT: {e}")
+    
+    CORS(app, origins=["*"], supports_credentials=True)
+    logger.info("✓ CORS initialized")
     
     # Register blueprints
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(attendance_bp)
-    app.register_blueprint(leave_bp)
-    app.register_blueprint(reports_bp)
-    app.register_blueprint(employee_bp)
+    try:
+        app.register_blueprint(auth_bp)
+        app.register_blueprint(attendance_bp)
+        app.register_blueprint(leave_bp)
+        app.register_blueprint(reports_bp)
+        app.register_blueprint(employee_bp)
+        logger.info("✓ Blueprints registered")
+    except Exception as e:
+        logger.error(f"✗ Failed to register blueprints: {e}")
     
-    # ============================================
-    # JWT Error Handlers
-    # ============================================
+    # JWT Error handlers
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
-        return jsonify({
-            'success': False,
-            'message': 'Token sudah kadaluarsa. Silakan login kembali.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Token kadaluarsa'}), 401
     
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
-        return jsonify({
-            'success': False,
-            'message': 'Token tidak valid.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Token tidak valid'}), 401
     
     @jwt.unauthorized_loader
     def missing_token_callback(error):
-        return jsonify({
-            'success': False,
-            'message': 'Token diperlukan untuk mengakses resource ini.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Token diperlukan'}), 401
     
-    # ============================================
-    # Error Handlers
-    # ============================================
-    @app.errorhandler(400)
-    def bad_request(e):
-        return jsonify({
-            'success': False,
-            'message': 'Request tidak valid'
-        }), 400
-    
+    # Error handlers
     @app.errorhandler(404)
     def not_found(e):
-        # Check if request is for API
         if request.path.startswith('/api'):
-            return jsonify({
-                'success': False,
-                'message': 'Endpoint tidak ditemukan'
-            }), 404
-        # For frontend routes, serve index.html
-        return send_from_directory(app.static_folder, 'index.html')
+            return jsonify({'success': False, 'message': 'Endpoint tidak ditemukan'}), 404
+        try:
+            return send_from_directory(app.static_folder, 'index.html')
+        except:
+            return jsonify({'success': False, 'message': 'Frontend not found'}), 404
     
     @app.errorhandler(500)
     def server_error(e):
-        logger.error(f'Server error: {str(e)}')
+        logger.error(f"Server error: {e}")
+        logger.error(traceback.format_exc())
         return jsonify({
-            'success': False,
-            'message': 'Terjadi kesalahan server. Silakan coba lagi.'
+            'success': False, 
+            'message': 'Terjadi kesalahan server',
+            'error': str(e)
         }), 500
     
-    # ============================================
-    # Health Check & Info Endpoints
-    # ============================================
+    # Health check - SIMPLE VERSION
     @app.route('/api/health')
     def health_check():
-        """Health check endpoint for Render/monitoring"""
-        try:
-            # Test database connection
-            db.session.execute(db.text('SELECT 1'))
-            db_status = 'connected'
-        except Exception as e:
-            db_status = f'error: {str(e)}'
-        
-        return jsonify({
-            'status': 'healthy',
+        result = {
+            'status': 'running',
             'timestamp': datetime.now().isoformat(),
             'version': '1.0.0',
-            'database': db_status,
-            'environment': config_name
-        }), 200
+            'database': 'unknown'
+        }
+        
+        try:
+            db.session.execute(db.text('SELECT 1'))
+            db.session.commit()
+            result['database'] = 'connected'
+        except Exception as e:
+            result['database'] = f'error: {str(e)}'
+            logger.error(f"Database health check failed: {e}")
+        
+        return jsonify(result), 200
     
-    @app.route('/api/info')
-    def app_info():
-        """Application info"""
+    # Debug endpoint
+    @app.route('/api/debug')
+    def debug_info():
         return jsonify({
-            'name': 'Sistem Absensi Karyawan',
-            'version': '1.0.0',
-            'year': 2025,
-            'description': 'Sistem Absensi Modern untuk Perusahaan Indonesia',
-            'features': [
-                'Absensi GPS',
-                'Absensi QR Code',
-                'Absensi Face Recognition',
-                'Manajemen Cuti (UU Ketenagakerjaan)',
-                'Laporan & Export Excel',
-                'Multi-cabang'
-            ]
+            'env': os.getenv('FLASK_ENV', 'not set'),
+            'database_url_set': bool(os.getenv('DATABASE_URL')),
+            'secret_key_set': bool(os.getenv('SECRET_KEY')),
+            'jwt_secret_set': bool(os.getenv('JWT_SECRET_KEY')),
+            'static_folder': app.static_folder,
+            'static_exists': os.path.exists(app.static_folder) if app.static_folder else False
         }), 200
     
-    # ============================================
-    # Frontend Routes
-    # ============================================
+    # Serve frontend
     @app.route('/')
     def serve_index():
-        """Serve main frontend page"""
-        return send_from_directory(app.static_folder, 'index.html')
+        try:
+            return send_from_directory(app.static_folder, 'index.html')
+        except Exception as e:
+            logger.error(f"Error serving index: {e}")
+            return jsonify({
+                'message': 'Sistem Absensi Karyawan API',
+                'health': '/api/health',
+                'debug': '/api/debug'
+            }), 200
     
     @app.route('/<path:path>')
     def serve_static(path):
-        """Serve static files or fallback to index.html for SPA"""
-        static_file = os.path.join(app.static_folder, path)
-        if os.path.exists(static_file):
-            return send_from_directory(app.static_folder, path)
-        # Fallback to index.html for client-side routing
-        return send_from_directory(app.static_folder, 'index.html')
-    
-    # ============================================
-    # Request Logging (Production)
-    # ============================================
-    @app.before_request
-    def log_request():
-        if config_name == 'production' and request.path.startswith('/api'):
-            logger.info(f'{request.method} {request.path} - {request.remote_addr}')
-    
-    @app.after_request
-    def add_security_headers(response):
-        """Add security headers"""
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        return response
+        try:
+            if app.static_folder and os.path.exists(os.path.join(app.static_folder, path)):
+                return send_from_directory(app.static_folder, path)
+            return send_from_directory(app.static_folder, 'index.html')
+        except:
+            return jsonify({'error': 'File not found'}), 404
     
     return app
 
@@ -213,181 +244,141 @@ def init_database(app):
     """Initialize database with tables and sample data"""
     
     with app.app_context():
-        # Create all tables
-        db.create_all()
-        
-        # Check if already initialized
-        if Company.query.first():
-            logger.info("Database sudah diinisialisasi sebelumnya")
+        try:
+            logger.info("Creating database tables...")
+            db.create_all()
+            logger.info("✓ Tables created")
+        except Exception as e:
+            logger.error(f"✗ Failed to create tables: {e}")
             return
         
-        logger.info("Menginisialisasi database...")
+        # Check if already initialized
+        try:
+            if Company.query.first():
+                logger.info("Database already has data")
+                return
+        except Exception as e:
+            logger.error(f"Error checking existing data: {e}")
+        
+        logger.info("Inserting initial data...")
         
         try:
-            # Create default company
+            # Create company
             company = Company(
                 name="PT Contoh Indonesia",
-                address="Jl. Sudirman No. 123, Jakarta Pusat",
+                address="Jl. Sudirman No. 123, Jakarta",
                 phone="021-1234567",
                 email="info@contoh.co.id",
-                npwp="01.234.567.8-012.000",
                 work_start_time="08:00",
                 work_end_time="17:00",
                 late_tolerance=15
             )
             db.session.add(company)
-            db.session.flush()  # Get company.id
-            
-            # Create departments
-            departments = [
-                Department(company_id=company.id, name="IT", code="IT"),
-                Department(company_id=company.id, name="Human Resources", code="HR"),
-                Department(company_id=company.id, name="Finance", code="FIN"),
-                Department(company_id=company.id, name="Marketing", code="MKT"),
-                Department(company_id=company.id, name="Operations", code="OPS")
-            ]
-            db.session.add_all(departments)
             db.session.flush()
+            logger.info(f"✓ Company created with ID: {company.id}")
             
-            # Create office locations
-            locations = [
-                OfficeLocation(
-                    company_id=company.id,
-                    name="Kantor Pusat Jakarta",
-                    address="Jl. Sudirman No. 123, Jakarta Pusat",
-                    latitude=-6.2088,
-                    longitude=106.8456,
-                    radius_meters=100
-                ),
-                OfficeLocation(
-                    company_id=company.id,
-                    name="Kantor Cabang Surabaya",
-                    address="Jl. Pemuda No. 45, Surabaya",
-                    latitude=-7.2575,
-                    longitude=112.7521,
-                    radius_meters=100
-                )
-            ]
-            db.session.add_all(locations)
+            # Create department
+            dept = Department(company_id=company.id, name="IT", code="IT")
+            db.session.add(dept)
+            db.session.flush()
+            logger.info(f"✓ Department created with ID: {dept.id}")
             
-            # Create admin user
+            # Create office location
+            location = OfficeLocation(
+                company_id=company.id,
+                name="Kantor Pusat",
+                latitude=-6.2088,
+                longitude=106.8456,
+                radius_meters=100
+            )
+            db.session.add(location)
+            logger.info("✓ Office location created")
+            
+            # Create admin
             admin = Employee(
                 company_id=company.id,
-                department_id=departments[1].id,  # HR
+                department_id=dept.id,
                 nik="1234567890123456",
                 nip="ADM001",
                 name="Administrator",
                 email="admin@contoh.co.id",
                 phone="081234567890",
-                position="HR Manager",
+                position="Admin",
                 role="admin",
-                employment_type="permanent",
-                join_date=datetime(2020, 1, 1).date(),
                 is_wfh_allowed=True
             )
             admin.set_password("admin123")
             db.session.add(admin)
             db.session.flush()
+            logger.info(f"✓ Admin created with ID: {admin.id}")
             
-            # Create leave balance for admin
-            leave_balance = LeaveBalance(
+            # Create leave balance
+            lb = LeaveBalance(
                 employee_id=admin.id,
                 year=datetime.now().year,
                 annual_quota=12,
                 annual_remaining=12
             )
-            db.session.add(leave_balance)
+            db.session.add(lb)
             
-            # Create sample employees
-            sample_employees = [
-                {
-                    "nik": "3201234567890001",
-                    "nip": "EMP001",
-                    "name": "Budi Santoso",
-                    "email": "budi@contoh.co.id",
-                    "position": "Software Developer",
-                    "department_id": departments[0].id,
-                    "role": "employee"
-                },
-                {
-                    "nik": "3201234567890002",
-                    "nip": "EMP002",
-                    "name": "Siti Rahayu",
-                    "email": "siti@contoh.co.id",
-                    "position": "UI/UX Designer",
-                    "department_id": departments[0].id,
-                    "role": "employee"
-                },
-                {
-                    "nik": "3201234567890003",
-                    "nip": "MGR001",
-                    "name": "Ahmad Wijaya",
-                    "email": "ahmad@contoh.co.id",
-                    "position": "IT Manager",
-                    "department_id": departments[0].id,
-                    "role": "manager"
-                }
-            ]
+            # Create sample employee
+            emp = Employee(
+                company_id=company.id,
+                department_id=dept.id,
+                nik="9999999999999999",
+                nip="EMP001",
+                name="Budi Santoso",
+                email="budi@contoh.co.id",
+                phone="081234567891",
+                position="Staff",
+                role="employee",
+                is_wfh_allowed=True
+            )
+            emp.set_password("password123")
+            db.session.add(emp)
+            db.session.flush()
             
-            for emp_data in sample_employees:
-                emp = Employee(
-                    company_id=company.id,
-                    department_id=emp_data["department_id"],
-                    nik=emp_data["nik"],
-                    nip=emp_data["nip"],
-                    name=emp_data["name"],
-                    email=emp_data["email"],
-                    position=emp_data["position"],
-                    role=emp_data["role"],
-                    employment_type="permanent",
-                    join_date=datetime(2023, 1, 1).date(),
-                    is_wfh_allowed=True
-                )
-                emp.set_password("password123")
-                db.session.add(emp)
-                db.session.flush()
-                
-                # Create leave balance
-                lb = LeaveBalance(
-                    employee_id=emp.id,
-                    year=datetime.now().year,
-                    annual_quota=12,
-                    annual_remaining=12
-                )
-                db.session.add(lb)
+            lb2 = LeaveBalance(
+                employee_id=emp.id,
+                year=datetime.now().year,
+                annual_quota=12,
+                annual_remaining=12
+            )
+            db.session.add(lb2)
             
             db.session.commit()
             
-            logger.info("=" * 50)
-            logger.info("Database berhasil diinisialisasi!")
-            logger.info("=" * 50)
-            logger.info("AKUN DEFAULT:")
-            logger.info("Admin   : admin@contoh.co.id / admin123")
+            logger.info("="*50)
+            logger.info("DATABASE INITIALIZED SUCCESSFULLY!")
+            logger.info("="*50)
+            logger.info("LOGIN CREDENTIALS:")
+            logger.info("Admin: admin@contoh.co.id / admin123")
             logger.info("Employee: budi@contoh.co.id / password123")
-            logger.info("Manager : ahmad@contoh.co.id / password123")
-            logger.info("=" * 50)
+            logger.info("="*50)
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error initializing database: {str(e)}")
-            raise
+            logger.error(f"✗ Failed to insert data: {e}")
+            logger.error(traceback.format_exc())
 
 
-# Create application instance
+# Create app
+logger.info("Creating application...")
 app = create_app()
 
+# Initialize database
+logger.info("Initializing database...")
+try:
+    init_database(app)
+except Exception as e:
+    logger.error(f"Database init error (non-fatal): {e}")
 
-# Initialize database on first run
-with app.app_context():
-    try:
-        init_database(app)
-    except Exception as e:
-        logger.warning(f"Database init skipped: {str(e)}")
-
+logger.info("="*50)
+logger.info("APPLICATION READY")
+logger.info("="*50)
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV') == 'development'
-    
     logger.info(f"Starting server on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=debug)
