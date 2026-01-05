@@ -1,0 +1,76 @@
+# Docker Compose for local development
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: absensi-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=jwt-dev-secret-change-in-production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/absensi_karyawan
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - uploads_data:/app/backend/uploads
+    restart: unless-stopped
+    networks:
+      - absensi-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: absensi-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=absensi_karyawan
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - absensi-network
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: absensi-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - absensi-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  absensi-network:
+    driver: bridge
