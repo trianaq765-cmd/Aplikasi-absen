@@ -1,9 +1,10 @@
 /**
- * Authentication Module - FIXED VERSION
+ * Authentication Module - FIXED v2
+ * Fix: Race condition saat login redirect
  */
 
 // ============================================
-// LOGIN
+// LOGIN - FIXED
 // ============================================
 async function login(email, password) {
     console.log('[Auth] Attempting login for:', email);
@@ -14,21 +15,29 @@ async function login(email, password) {
         console.log('[Auth] Login result:', result);
         
         if (result.success && result.data) {
-            // Save tokens
+            // Save tokens FIRST
             if (result.data.access_token) {
-                setToken(result.data.access_token);
+                localStorage.setItem('absensi_token', result.data.access_token);
                 console.log('[Auth] Access token saved');
             }
             
             if (result.data.refresh_token) {
-                setRefreshToken(result.data.refresh_token);
+                localStorage.setItem('absensi_refresh_token', result.data.refresh_token);
                 console.log('[Auth] Refresh token saved');
             }
             
             // Save user data
             if (result.data.employee) {
-                setUser(result.data.employee);
+                localStorage.setItem('absensi_user', JSON.stringify(result.data.employee));
                 console.log('[Auth] User data saved:', result.data.employee.name);
+            }
+            
+            // Verify token was saved
+            const savedToken = localStorage.getItem('absensi_token');
+            console.log('[Auth] Token verification:', savedToken ? 'OK' : 'FAILED');
+            
+            if (!savedToken) {
+                return { success: false, message: 'Gagal menyimpan token' };
             }
             
             return { success: true };
@@ -47,39 +56,53 @@ async function login(email, password) {
 // ============================================
 function logout() {
     console.log('[Auth] Logging out...');
-    removeTokens();
+    
+    // Clear all auth data
+    localStorage.removeItem('absensi_token');
+    localStorage.removeItem('absensi_refresh_token');
+    localStorage.removeItem('absensi_user');
+    
     showToast('Anda telah keluar', 'info');
+    
+    // Redirect after toast shows
     setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.replace('index.html');
     }, 500);
 }
 
 // ============================================
-// CHECK AUTH
+// CHECK AUTH - FIXED
 // ============================================
 function checkAuth() {
-    const token = getToken();
+    const token = localStorage.getItem('absensi_token');
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-    const publicPages = ['index.html', '', 'login.html'];
+    const isLoginPage = currentPage === 'index.html' || currentPage === '' || currentPage === 'login.html';
     
-    console.log('[Auth] Checking auth, token exists:', !!token, ', page:', currentPage);
+    console.log('[Auth] checkAuth called');
+    console.log('[Auth] - Current page:', currentPage);
+    console.log('[Auth] - Is login page:', isLoginPage);
+    console.log('[Auth] - Token exists:', !!token);
     
-    if (!token && !publicPages.includes(currentPage)) {
-        console.log('[Auth] No token, redirecting to login');
-        window.location.href = 'index.html';
+    // Jika di halaman login dan sudah punya token -> ke dashboard
+    if (isLoginPage && token) {
+        console.log('[Auth] Has token on login page, redirecting to dashboard...');
+        window.location.replace('dashboard.html');
         return false;
     }
     
-    if (token && publicPages.includes(currentPage)) {
-        console.log('[Auth] Has token on public page, redirecting to dashboard');
-        window.location.href = 'dashboard.html';
+    // Jika di halaman protected dan tidak punya token -> ke login
+    if (!isLoginPage && !token) {
+        console.log('[Auth] No token on protected page, redirecting to login...');
+        window.location.replace('index.html');
         return false;
     }
     
+    // Load user header jika ada token
     if (token) {
         loadUserHeader();
     }
     
+    console.log('[Auth] checkAuth passed');
     return true;
 }
 
@@ -87,48 +110,50 @@ function checkAuth() {
 // LOAD USER HEADER
 // ============================================
 function loadUserHeader() {
-    const user = getUser();
-    console.log('[Auth] Loading user header:', user);
-    
-    if (!user) {
-        console.log('[Auth] No user data found');
-        return;
-    }
-    
-    // Update nama user di header
-    const nameElements = document.querySelectorAll('#userName, #welcomeName');
-    nameElements.forEach(el => {
-        if (el) el.textContent = user.name || 'User';
-    });
-    
-    // Update role jika ada
-    const roleElement = document.getElementById('userRole');
-    if (roleElement && user.role) {
-        const roleLabels = {
-            admin: 'Administrator',
-            hr: 'Human Resources',
-            manager: 'Manager',
-            employee: 'Karyawan'
-        };
-        roleElement.textContent = roleLabels[user.role] || user.role;
+    try {
+        const userStr = localStorage.getItem('absensi_user');
+        if (!userStr) {
+            console.log('[Auth] No user data in storage');
+            return;
+        }
+        
+        const user = JSON.parse(userStr);
+        console.log('[Auth] Loading user header for:', user.name);
+        
+        // Update nama
+        document.querySelectorAll('#userName, #welcomeName').forEach(el => {
+            if (el) el.textContent = user.name || 'User';
+        });
+        
+        // Update role
+        const roleElement = document.getElementById('userRole');
+        if (roleElement && user.role) {
+            const roleLabels = {
+                admin: 'Administrator',
+                hr: 'Human Resources',
+                manager: 'Manager',
+                employee: 'Karyawan'
+            };
+            roleElement.textContent = roleLabels[user.role] || user.role;
+        }
+        
+    } catch (e) {
+        console.error('[Auth] Error loading user header:', e);
     }
 }
 
 // ============================================
-// GET PROFILE (untuk refresh data user)
+// GET PROFILE
 // ============================================
 async function getProfile() {
-    console.log('[Auth] Getting profile...');
-    
     const result = await api.get('/auth/profile');
     
     if (result.success && result.data) {
-        setUser(result.data);
+        localStorage.setItem('absensi_user', JSON.stringify(result.data));
         loadUserHeader();
         return result.data;
     }
     
-    console.log('[Auth] Failed to get profile:', result.message);
     return null;
 }
 
@@ -141,4 +166,4 @@ window.checkAuth = checkAuth;
 window.loadUserHeader = loadUserHeader;
 window.getProfile = getProfile;
 
-console.log('[Auth] Loaded successfully');
+console.log('[Auth] Module loaded');
