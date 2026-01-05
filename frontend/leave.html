@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuti - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><i class="fas fa-fingerprint"></i><span>Absensi</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="attendance.html"><i class="fas fa-clock"></i><span>Absensi</span></a></li>
+                    <li class="active"><a href="leave.html"><i class="fas fa-calendar-alt"></i><span>Cuti</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <div class="header-title"><h1>Cuti & Izin</h1></div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openLeaveModal()">
+                        <i class="fas fa-plus"></i> Ajukan Cuti
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="card">
+                    <h3><i class="fas fa-calendar-check"></i> Saldo Cuti 2025</h3>
+                    <div class="balance-info">
+                        <div class="balance-item">
+                            <span class="balance-label">Jatah Tahunan</span>
+                            <span class="balance-value" id="balanceQuota">12 hari</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="balance-label">Terpakai</span>
+                            <span class="balance-value" id="balanceUsed">0 hari</span>
+                        </div>
+                        <div class="balance-item highlight">
+                            <span class="balance-label">Sisa</span>
+                            <span class="balance-value" id="balanceRemaining">12 hari</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-list"></i> Pengajuan Saya</h3>
+                    <div id="leaveList" class="leave-list">
+                        <p>Memuat data...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="leaveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-plus"></i> Ajukan Cuti</h3>
+                <button class="modal-close" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="leaveForm" class="modal-body">
+                <div class="form-group">
+                    <label>Jenis Cuti *</label>
+                    <select id="leaveType" required>
+                        <option value="">Pilih jenis cuti...</option>
+                        <option value="annual">Cuti Tahunan</option>
+                        <option value="sick">Sakit</option>
+                        <option value="marriage">Cuti Menikah</option>
+                        <option value="bereavement">Duka Cita</option>
+                        <option value="unpaid">Tanpa Gaji</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tanggal Mulai *</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Selesai *</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Alasan *</label>
+                    <textarea id="reason" rows="3" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeLeaveModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Ajukan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/leave.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initLeavePage();
+        });
+    </script>
+</body>
+</html>
