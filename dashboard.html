@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Absensi</span>
+                </div>
+                <button class="sidebar-close" onclick="toggleSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="dashboard.html">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="attendance.html">
+                            <i class="fas fa-clock"></i>
+                            <span>Absensi</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="leave.html">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Cuti & Izin</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="history.html">
+                            <i class="fas fa-history"></i>
+                            <span>Riwayat</span>
+                        </a>
+                    </li>
+                    
+                    <!-- Admin Menu -->
+                    <li class="menu-divider admin-only" style="display:none;">
+                        <span>Admin</span>
+                    </li>
+                    <li class="admin-only" style="display:none;">
+                        <a href="employees.html">
+                            <i class="fas fa-users"></i>
+                            <span>Karyawan</span>
+                        </a>
+                    </li>
+                    <li class="admin-only" style="display:none;">
+                        <a href="reports.html">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Laporan</span>
+                        </a>
+                    </li>
+                    <li class="admin-only" style="display:none;">
+                        <a href="approvals.html">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Persetujuan</span>
+                            <span class="badge" id="pendingBadge">0</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Keluar</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="header-title">
+                    <h1>Dashboard</h1>
+                    <p id="currentDate"></p>
+                </div>
+
+                <div class="header-actions">
+                    <div class="user-info" onclick="toggleUserMenu()">
+                        <div class="user-avatar" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="user-details">
+                            <span class="user-name" id="userName">Loading...</span>
+                            <span class="user-role" id="userRole">-</span>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+
+                    <!-- User Dropdown -->
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="profile.html">
+                            <i class="fas fa-user-cog"></i> Profil Saya
+                        </a>
+                        <a href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Keluar
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="content">
+                <!-- Welcome Card -->
+                <div class="welcome-card">
+                    <div class="welcome-text">
+                        <h2>Selamat <span id="greeting">Pagi</span>, <span id="welcomeName">User</span>! 👋</h2>
+                        <p id="welcomeMessage">Semoga harimu produktif!</p>
+                    </div>
+                    <div class="welcome-time">
+                        <div class="clock" id="liveClock">00:00:00</div>
+                        <span class="timezone">WIB</span>
+                    </div>
+                </div>
+
+                <!-- Quick Attendance -->
+                <div class="quick-attendance card">
+                    <h3><i class="fas fa-clock"></i> Absensi Hari Ini</h3>
+                    
+                    <div class="attendance-status" id="attendanceStatus">
+                        <div class="status-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Memuat data...</p>
+                        </div>
+                    </div>
+
+                    <div class="attendance-actions" id="attendanceActions">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="statPresent">0</h4>
+                            <p>Hadir Bulan Ini</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="statLate">0</h4>
+                            <p>Terlambat</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon bg-info">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="statWfh">0</h4>
+                            <p>WFH</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="statLeave">12</h4>
+                            <p>Sisa Cuti</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Stats -->
+                <div class="admin-stats admin-only" style="display:none;">
+                    <h3><i class="fas fa-chart-pie"></i> Statistik Hari Ini</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4 id="adminTotalEmployees">0</h4>
+                                <p>Total Karyawan</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-success">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4 id="adminTodayPresent">0</h4>
+                                <p>Hadir Hari Ini</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-danger">
+                                <i class="fas fa-user-times"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4 id="adminTodayAbsent">0</h4>
+                                <p>Belum Hadir</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-warning">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4 id="adminPendingApprovals">0</h4>
+                                <p>Menunggu Approval</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Aktivitas Terakhir</h3>
+                        <a href="history.html" class="btn btn-sm btn-outline">Lihat Semua</a>
+                    </div>
+                    <div class="activity-list" id="recentActivity">
+                        <div class="loading-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Memuat aktivitas...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
