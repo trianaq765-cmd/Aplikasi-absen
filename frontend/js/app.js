@@ -1,44 +1,170 @@
+/**
+ * Dashboard App - FIXED VERSION
+ */
+
+// ============================================
+// INITIALIZE DASHBOARD
+// ============================================
 async function initDashboard() {
-    document.getElementById('currentDate').textContent = getCurrentDateFormatted();
-    document.getElementById('greeting').textContent = getGreeting();
+    console.log('[Dashboard] Initializing...');
+    
+    // Set current date
+    const dateElement = document.getElementById('currentDate');
+    if (dateElement) {
+        dateElement.textContent = getCurrentDateFormatted();
+    }
+    
+    // Set greeting
+    const greetingElement = document.getElementById('greeting');
+    if (greetingElement) {
+        greetingElement.textContent = getGreeting();
+    }
+    
+    // Start live clock
     startLiveClock();
+    
+    // Load dashboard data
     await loadDashboardData();
 }
 
+// ============================================
+// LOAD DASHBOARD DATA
+// ============================================
 async function loadDashboardData() {
-    const result = await api.get('/reports/dashboard');
+    console.log('[Dashboard] Loading data...');
     
-    if (result.success) {
-        const data = result.data;
+    const statusContainer = document.getElementById('attendanceStatus');
+    const actionsContainer = document.getElementById('attendanceActions');
+    
+    try {
+        const result = await api.get('/reports/dashboard');
         
-        // Today's attendance
-        const status = document.getElementById('attendanceStatus');
-        const actions = document.getElementById('attendanceActions');
+        console.log('[Dashboard] API result:', result);
         
-        if (data.today.clock_in) {
-            status.innerHTML = `
-                <div class="attendance-info">
-                    <div>Masuk: <strong>${data.today.clock_in}</strong></div>
-                    ${data.today.clock_out ? `<div>Pulang: <strong>${data.today.clock_out}</strong></div>` : ''}
-                </div>
-            `;
+        if (result.success && result.data) {
+            const data = result.data;
             
-            if (data.today.clock_out) {
-                actions.innerHTML = '<p style="color: var(--success);">✓ Absensi lengkap</p>';
-            } else {
-                actions.innerHTML = '<a href="attendance.html" class="btn btn-danger">Absen Pulang</a>';
+            // Update today's attendance
+            updateTodayAttendance(data.today, statusContainer, actionsContainer);
+            
+            // Update monthly stats
+            updateMonthlyStats(data.monthly);
+            
+            // Update leave balance
+            if (data.leave_balance) {
+                const leaveEl = document.getElementById('statLeave');
+                if (leaveEl) {
+                    leaveEl.textContent = data.leave_balance.remaining || 12;
+                }
             }
+            
         } else {
-            status.innerHTML = '<p>Belum absen hari ini</p>';
-            actions.innerHTML = '<a href="attendance.html" class="btn btn-success">Absen Masuk</a>';
+            console.error('[Dashboard] API error:', result.message);
+            
+            if (statusContainer) {
+                statusContainer.innerHTML = `<p style="color: var(--danger);">Gagal memuat data: ${result.message || 'Unknown error'}</p>`;
+            }
+            if (actionsContainer) {
+                actionsContainer.innerHTML = '<a href="attendance.html" class="btn btn-primary">Buka Absensi</a>';
+            }
         }
         
-        // Stats
-        document.getElementById('statPresent').textContent = data.monthly.present || 0;
-        document.getElementById('statLate').textContent = data.monthly.late || 0;
-        document.getElementById('statWfh').textContent = data.monthly.wfh || 0;
-        document.getElementById('statLeave').textContent = data.leave_balance.remaining || 12;
+    } catch (error) {
+        console.error('[Dashboard] Error:', error);
+        
+        if (statusContainer) {
+            statusContainer.innerHTML = '<p style="color: var(--danger);">Terjadi kesalahan</p>';
+        }
+        if (actionsContainer) {
+            actionsContainer.innerHTML = '<button class="btn btn-outline" onclick="loadDashboardData()">Coba Lagi</button>';
+        }
     }
 }
 
+// ============================================
+// UPDATE TODAY ATTENDANCE
+// ============================================
+function updateTodayAttendance(today, statusContainer, actionsContainer) {
+    console.log('[Dashboard] Today data:', today);
+    
+    if (!statusContainer || !actionsContainer) return;
+    
+    if (!today) {
+        statusContainer.innerHTML = '<p>Belum ada data hari ini</p>';
+        actionsContainer.innerHTML = '<a href="attendance.html" class="btn btn-success btn-lg"><i class="fas fa-sign-in-alt"></i> Absen Masuk</a>';
+        return;
+    }
+    
+    if (today.clock_in) {
+        // Already clocked in
+        let html = `
+            <div class="attendance-info">
+                <div class="attendance-time">
+                    <span class="label">Masuk</span>
+                    <span class="time" style="color: var(--success); font-size: 1.5rem; font-weight: bold;">${today.clock_in}</span>
+                </div>
+        `;
+        
+        if (today.clock_out) {
+            html += `
+                <div class="attendance-time">
+                    <span class="label">Pulang</span>
+                    <span class="time" style="color: var(--info); font-size: 1.5rem; font-weight: bold;">${today.clock_out}</span>
+                </div>
+            `;
+            
+            statusContainer.innerHTML = html + '</div>';
+            actionsContainer.innerHTML = '<p style="color: var(--success);"><i class="fas fa-check-circle"></i> Absensi hari ini sudah lengkap</p>';
+            
+        } else {
+            html += `
+                <div class="attendance-time">
+                    <span class="label">Pulang</span>
+                    <span class="time" style="color: var(--gray-400); font-size: 1.5rem;">--:--</span>
+                </div>
+            `;
+            
+            statusContainer.innerHTML = html + '</div>';
+            actionsContainer.innerHTML = '<a href="attendance.html" class="btn btn-danger btn-lg"><i class="fas fa-sign-out-alt"></i> Absen Pulang</a>';
+        }
+        
+    } else {
+        // Not clocked in yet
+        statusContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <i class="fas fa-clock" style="font-size: 2rem; color: var(--gray-300); margin-bottom: 10px;"></i>
+                <p>Anda belum absen masuk hari ini</p>
+            </div>
+        `;
+        
+        actionsContainer.innerHTML = '<a href="attendance.html" class="btn btn-success btn-lg"><i class="fas fa-sign-in-alt"></i> Absen Masuk Sekarang</a>';
+    }
+}
+
+// ============================================
+// UPDATE MONTHLY STATS
+// ============================================
+function updateMonthlyStats(monthly) {
+    console.log('[Dashboard] Monthly data:', monthly);
+    
+    if (!monthly) return;
+    
+    const elements = {
+        'statPresent': monthly.present || 0,
+        'statLate': monthly.late || 0,
+        'statWfh': monthly.wfh || 0
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    });
+}
+
+// ============================================
+// EXPORT GLOBAL
+// ============================================
 window.initDashboard = initDashboard;
+window.loadDashboardData = loadDashboardData;
+
+console.log('[App] Loaded successfully');
