@@ -8,10 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+    <!-- Check auth IMMEDIATELY -->
+    <script>
+        (function() {
+            if (!localStorage.getItem('absensi_token')) {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
+
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo"><i class="fas fa-fingerprint"></i><span>Absensi</span></div>
+                <button class="sidebar-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -21,7 +31,7 @@
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+                <a href="#" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
             </div>
         </aside>
 
@@ -30,14 +40,14 @@
                 <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 <div class="header-title">
                     <h1>Absensi</h1>
-                    <p id="currentDate"></p>
+                    <p id="currentDate">-</p>
                 </div>
             </header>
 
             <div class="content">
                 <div class="time-display card">
                     <div class="big-clock" id="bigClock">00:00:00</div>
-                    <p id="dateDisplay"></p>
+                    <p id="dateDisplay">-</p>
                     <span class="timezone-badge">Waktu Indonesia Barat (WIB)</span>
                 </div>
 
@@ -66,22 +76,22 @@
                 <div class="card">
                     <h3><i class="fas fa-map-marker-alt"></i> Absensi dengan GPS</h3>
                     <div id="locationInfo" class="location-info">
-                        <div class="location-loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                        <div style="text-align: center;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
                             <p>Mendapatkan lokasi...</p>
                         </div>
                     </div>
 
                     <div class="work-type-selector">
-                        <label>Tipe Kerja:</label>
+                        <label style="display: block; margin-bottom: 10px; font-weight: 500;">Tipe Kerja:</label>
                         <div class="radio-group">
                             <label class="radio-option">
                                 <input type="radio" name="workType" value="wfo" checked>
-                                <span><i class="fas fa-building"></i> WFO</span>
+                                <span><i class="fas fa-building"></i> WFO (Kantor)</span>
                             </label>
                             <label class="radio-option">
                                 <input type="radio" name="workType" value="wfh">
-                                <span><i class="fas fa-home"></i> WFH</span>
+                                <span><i class="fas fa-home"></i> WFH (Rumah)</span>
                             </label>
                         </div>
                     </div>
@@ -105,8 +115,12 @@
     <script src="js/auth.js"></script>
     <script src="js/attendance.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('absensi_token')) {
+                window.location.replace('index.html');
+                return;
+            }
+            loadUserHeader();
             initAttendancePage();
         });
     </script>
