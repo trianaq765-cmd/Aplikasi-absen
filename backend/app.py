@@ -1,109 +1,114 @@
 """
 Sistem Absensi Karyawan 2025
-Main Application - With Debug
+Main Application - FIXED with DB Retry Logic
 """
 
 import os
 import sys
 import logging
 import traceback
+import time
+from functools import wraps
 from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from datetime import datetime
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError, DisconnectionError
 
 # Setup logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     stream=sys.stdout
 )
 logger = logging.getLogger(__name__)
 
-# Log startup
 logger.info("="*50)
 logger.info("Starting Sistem Absensi Karyawan 2025")
 logger.info("="*50)
 
-# Try importing config
+# Import config
 try:
     from config import config
-    logger.info("✓ Config imported successfully")
+    logger.info("✓ Config imported")
 except Exception as e:
-    logger.error(f"✗ Failed to import config: {e}")
+    logger.error(f"✗ Config import failed: {e}")
     traceback.print_exc()
 
-# Try importing models
+# Import models
 try:
     from models import db, Company, Department, Employee, OfficeLocation, LeaveBalance
-    logger.info("✓ Models imported successfully")
+    logger.info("✓ Models imported")
 except Exception as e:
-    logger.error(f"✗ Failed to import models: {e}")
+    logger.error(f"✗ Models import failed: {e}")
     traceback.print_exc()
 
-# Try importing routes
+# Import routes
 try:
     from routes import auth_bp, attendance_bp, leave_bp, reports_bp, employee_bp
-    logger.info("✓ Route blueprints imported successfully")
-except Exception as e:
-    logger.error(f"✗ Failed to import routes: {e}")
-    traceback.print_exc()
-
-# Import route handlers
-try:
     from routes.auth import *
-    logger.info("✓ Auth routes imported")
-except Exception as e:
-    logger.error(f"✗ Failed to import auth routes: {e}")
-    traceback.print_exc()
-
-try:
     from routes.attendance import *
-    logger.info("✓ Attendance routes imported")
-except Exception as e:
-    logger.error(f"✗ Failed to import attendance routes: {e}")
-    traceback.print_exc()
-
-try:
     from routes.leave import *
-    logger.info("✓ Leave routes imported")
-except Exception as e:
-    logger.error(f"✗ Failed to import leave routes: {e}")
-    traceback.print_exc()
-
-try:
     from routes.reports import *
-    logger.info("✓ Reports routes imported")
-except Exception as e:
-    logger.error(f"✗ Failed to import reports routes: {e}")
-    traceback.print_exc()
-
-try:
     from routes.employee import *
-    logger.info("✓ Employee routes imported")
+    logger.info("✓ Routes imported")
 except Exception as e:
-    logger.error(f"✗ Failed to import employee routes: {e}")
+    logger.error(f"✗ Routes import failed: {e}")
     traceback.print_exc()
 
-# Initialize extensions
+# Initialize JWT
 jwt = JWTManager()
 
 
+# ============================================
+# DATABASE RETRY DECORATOR
+# ============================================
+def db_retry(max_retries=3, delay=1):
+    """Decorator to retry database operations on connection errors"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (OperationalError, DisconnectionError) as e:
+                    last_error = e
+                    logger.warning(f"DB connection error (attempt {attempt + 1}/{max_retries}): {e}")
+                    
+                    # Try to rollback and reconnect
+                    try:
+                        db.session.rollback()
+                        db.session.remove()
+                        db.engine.dispose()
+                    except:
+                        pass
+                    
+                    if attempt < max_retries - 1:
+                        time.sleep(delay * (attempt + 1))  # Exponential backoff
+                    
+            # All retries failed
+            logger.error(f"All {max_retries} DB retry attempts failed")
+            raise last_error
+        return wrapper
+    return decorator
+
+
+# ============================================
+# APPLICATION FACTORY
+# ============================================
 def create_app(config_name=None):
-    """Application factory"""
-    
     if config_name is None:
         config_name = os.getenv('FLASK_ENV', 'production')
     
     logger.info(f"Creating app with config: {config_name}")
     
-    # Get paths
+    # Paths
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     static_folder = os.path.join(base_dir, 'frontend')
     
-    logger.info(f"Base dir: {base_dir}")
     logger.info(f"Static folder: {static_folder}")
-    logger.info(f"Static folder exists: {os.path.exists(static_folder)}")
     
     app = Flask(__name__, static_folder=static_folder, static_url_path='')
     
@@ -111,59 +116,53 @@ def create_app(config_name=None):
     try:
         app.config.from_object(config[config_name])
         logger.info("✓ Config loaded")
+        logger.info(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', '')[:50]}...")
     except Exception as e:
-        logger.error(f"✗ Failed to load config: {e}")
-        # Use default config
-        app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret')
+        logger.error(f"Config load failed: {e}")
+        # Fallback config
+        app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret')
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///absensi.db')
         if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
             app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret')
-    
-    logger.info(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')[:50]}...")
+        app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'fallback-jwt')
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_pre_ping': True,
+            'pool_recycle': 280,
+        }
     
     # Initialize extensions
-    try:
-        db.init_app(app)
-        logger.info("✓ Database initialized")
-    except Exception as e:
-        logger.error(f"✗ Failed to init database: {e}")
-    
-    try:
-        jwt.init_app(app)
-        logger.info("✓ JWT initialized")
-    except Exception as e:
-        logger.error(f"✗ Failed to init JWT: {e}")
-    
+    db.init_app(app)
+    jwt.init_app(app)
     CORS(app, origins=["*"], supports_credentials=True)
-    logger.info("✓ CORS initialized")
+    logger.info("✓ Extensions initialized")
     
     # Register blueprints
-    try:
-        app.register_blueprint(auth_bp)
-        app.register_blueprint(attendance_bp)
-        app.register_blueprint(leave_bp)
-        app.register_blueprint(reports_bp)
-        app.register_blueprint(employee_bp)
-        logger.info("✓ Blueprints registered")
-    except Exception as e:
-        logger.error(f"✗ Failed to register blueprints: {e}")
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(attendance_bp)
+    app.register_blueprint(leave_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(employee_bp)
+    logger.info("✓ Blueprints registered")
     
-    # JWT Error handlers
+    # ============================================
+    # JWT Error Handlers
+    # ============================================
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
-        return jsonify({'success': False, 'message': 'Token kadaluarsa'}), 401
+        return jsonify({'success': False, 'message': 'Token kadaluarsa. Silakan login kembali.'}), 401
     
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
-        return jsonify({'success': False, 'message': 'Token tidak valid'}), 401
+        return jsonify({'success': False, 'message': 'Token tidak valid.'}), 401
     
     @jwt.unauthorized_loader
     def missing_token_callback(error):
-        return jsonify({'success': False, 'message': 'Token diperlukan'}), 401
+        return jsonify({'success': False, 'message': 'Token diperlukan.'}), 401
     
-    # Error handlers
+    # ============================================
+    # Error Handlers
+    # ============================================
     @app.errorhandler(404)
     def not_found(e):
         if request.path.startswith('/api'):
@@ -171,51 +170,79 @@ def create_app(config_name=None):
         try:
             return send_from_directory(app.static_folder, 'index.html')
         except:
-            return jsonify({'success': False, 'message': 'Frontend not found'}), 404
+            return jsonify({'message': 'API Sistem Absensi', 'health': '/api/health'}), 200
     
     @app.errorhandler(500)
     def server_error(e):
         logger.error(f"Server error: {e}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            'success': False, 
-            'message': 'Terjadi kesalahan server',
-            'error': str(e)
-        }), 500
+        
+        # Check if it's a database error
+        error_str = str(e).lower()
+        if 'ssl' in error_str or 'connection' in error_str or 'operational' in error_str:
+            try:
+                db.session.rollback()
+                db.session.remove()
+            except:
+                pass
+            return jsonify({
+                'success': False,
+                'message': 'Koneksi database terputus. Silakan coba lagi.',
+                'retry': True
+            }), 503
+        
+        return jsonify({'success': False, 'message': 'Terjadi kesalahan server'}), 500
     
-    # Health check - SIMPLE VERSION
+    # ============================================
+    # Health Check with DB Retry
+    # ============================================
     @app.route('/api/health')
     def health_check():
         result = {
             'status': 'running',
             'timestamp': datetime.now().isoformat(),
             'version': '1.0.0',
-            'database': 'unknown'
+            'database': 'checking...'
         }
         
-        try:
-            db.session.execute(db.text('SELECT 1'))
-            db.session.commit()
-            result['database'] = 'connected'
-        except Exception as e:
-            result['database'] = f'error: {str(e)}'
-            logger.error(f"Database health check failed: {e}")
+        # Try to connect to database with retry
+        for attempt in range(3):
+            try:
+                db.session.execute(text('SELECT 1'))
+                db.session.commit()
+                result['database'] = 'connected'
+                break
+            except Exception as e:
+                logger.warning(f"Health check DB attempt {attempt + 1} failed: {e}")
+                try:
+                    db.session.rollback()
+                    db.session.remove()
+                except:
+                    pass
+                
+                if attempt == 2:
+                    result['database'] = f'error after 3 attempts'
+                else:
+                    time.sleep(1)
         
-        return jsonify(result), 200
+        status_code = 200 if result['database'] == 'connected' else 503
+        return jsonify(result), status_code
     
-    # Debug endpoint
+    # ============================================
+    # Debug Endpoint
+    # ============================================
     @app.route('/api/debug')
     def debug_info():
         return jsonify({
             'env': os.getenv('FLASK_ENV', 'not set'),
             'database_url_set': bool(os.getenv('DATABASE_URL')),
             'secret_key_set': bool(os.getenv('SECRET_KEY')),
-            'jwt_secret_set': bool(os.getenv('JWT_SECRET_KEY')),
             'static_folder': app.static_folder,
             'static_exists': os.path.exists(app.static_folder) if app.static_folder else False
         }), 200
     
-    # Serve frontend
+    # ============================================
+    # Frontend Routes
+    # ============================================
     @app.route('/')
     def serve_index():
         try:
@@ -224,8 +251,7 @@ def create_app(config_name=None):
             logger.error(f"Error serving index: {e}")
             return jsonify({
                 'message': 'Sistem Absensi Karyawan API',
-                'health': '/api/health',
-                'debug': '/api/debug'
+                'health': '/api/health'
             }), 200
     
     @app.route('/<path:path>')
@@ -237,28 +263,63 @@ def create_app(config_name=None):
         except:
             return jsonify({'error': 'File not found'}), 404
     
+    # ============================================
+    # Request Hooks
+    # ============================================
+    @app.before_request
+    def before_request():
+        # Ensure fresh database connection for each request
+        try:
+            db.session.execute(text('SELECT 1'))
+        except:
+            try:
+                db.session.rollback()
+                db.session.remove()
+            except:
+                pass
+    
+    @app.teardown_request
+    def teardown_request(exception=None):
+        # Clean up database session after each request
+        try:
+            if exception:
+                db.session.rollback()
+            db.session.remove()
+        except:
+            pass
+    
     return app
 
 
+# ============================================
+# DATABASE INITIALIZATION
+# ============================================
 def init_database(app):
-    """Initialize database with tables and sample data"""
-    
     with app.app_context():
-        try:
-            logger.info("Creating database tables...")
-            db.create_all()
-            logger.info("✓ Tables created")
-        except Exception as e:
-            logger.error(f"✗ Failed to create tables: {e}")
-            return
+        # Create tables with retry
+        for attempt in range(3):
+            try:
+                logger.info(f"Creating tables (attempt {attempt + 1})...")
+                db.create_all()
+                logger.info("✓ Tables created")
+                break
+            except Exception as e:
+                logger.error(f"Table creation failed: {e}")
+                if attempt == 2:
+                    return
+                time.sleep(2)
         
-        # Check if already initialized
+        # Check if data exists
         try:
             if Company.query.first():
                 logger.info("Database already has data")
                 return
         except Exception as e:
-            logger.error(f"Error checking existing data: {e}")
+            logger.warning(f"Check existing data failed: {e}")
+            try:
+                db.session.rollback()
+            except:
+                pass
         
         logger.info("Inserting initial data...")
         
@@ -275,13 +336,13 @@ def init_database(app):
             )
             db.session.add(company)
             db.session.flush()
-            logger.info(f"✓ Company created with ID: {company.id}")
+            logger.info(f"✓ Company created: {company.id}")
             
             # Create department
             dept = Department(company_id=company.id, name="IT", code="IT")
             db.session.add(dept)
             db.session.flush()
-            logger.info(f"✓ Department created with ID: {dept.id}")
+            logger.info(f"✓ Department created: {dept.id}")
             
             # Create office location
             location = OfficeLocation(
@@ -292,7 +353,6 @@ def init_database(app):
                 radius_meters=100
             )
             db.session.add(location)
-            logger.info("✓ Office location created")
             
             # Create admin
             admin = Employee(
@@ -310,9 +370,8 @@ def init_database(app):
             admin.set_password("admin123")
             db.session.add(admin)
             db.session.flush()
-            logger.info(f"✓ Admin created with ID: {admin.id}")
             
-            # Create leave balance
+            # Create leave balance for admin
             lb = LeaveBalance(
                 employee_id=admin.id,
                 year=datetime.now().year,
@@ -349,34 +408,35 @@ def init_database(app):
             db.session.commit()
             
             logger.info("="*50)
-            logger.info("DATABASE INITIALIZED SUCCESSFULLY!")
-            logger.info("="*50)
-            logger.info("LOGIN CREDENTIALS:")
+            logger.info("DATABASE INITIALIZED!")
             logger.info("Admin: admin@contoh.co.id / admin123")
             logger.info("Employee: budi@contoh.co.id / password123")
             logger.info("="*50)
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"✗ Failed to insert data: {e}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Data insertion failed: {e}")
+            traceback.print_exc()
 
 
-# Create app
-logger.info("Creating application...")
+# ============================================
+# CREATE APP
+# ============================================
 app = create_app()
 
 # Initialize database
-logger.info("Initializing database...")
 try:
     init_database(app)
 except Exception as e:
-    logger.error(f"Database init error (non-fatal): {e}")
+    logger.warning(f"Database init skipped: {e}")
 
 logger.info("="*50)
 logger.info("APPLICATION READY")
 logger.info("="*50)
 
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_ENV') == 'development')
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV') == 'development'
