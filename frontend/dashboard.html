@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistem Absensi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><i class="fas fa-fingerprint"></i><span>Absensi</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active"><a href="dashboard.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="attendance.html"><i class="fas fa-clock"></i><span>Absensi</span></a></li>
+                    <li><a href="leave.html"><i class="fas fa-calendar-alt"></i><span>Cuti</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Keluar</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <div class="header-title">
+                    <h1>Dashboard</h1>
+                    <p id="currentDate"></p>
+                </div>
+                <div class="header-actions">
+                    <span id="userName">Loading...</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="welcome-card">
+                    <div class="welcome-text">
+                        <h2>Selamat <span id="greeting">Pagi</span>, <span id="welcomeName">User</span>! 👋</h2>
+                        <p>Semoga harimu produktif!</p>
+                    </div>
+                    <div class="welcome-time">
+                        <div class="clock" id="liveClock">00:00:00</div>
+                        <span class="timezone">WIB</span>
+                    </div>
+                </div>
+
+                <div class="quick-attendance card">
+                    <h3><i class="fas fa-clock"></i> Absensi Hari Ini</h3>
+                    <div id="attendanceStatus" class="attendance-status">
+                        <p>Memuat data...</p>
+                    </div>
+                    <div id="attendanceActions" class="attendance-actions"></div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info"><h4 id="statPresent">0</h4><p>Hadir Bulan Ini</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info"><h4 id="statLate">0</h4><p>Terlambat</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-info"><i class="fas fa-home"></i></div>
+                        <div class="stat-info"><h4 id="statWfh">0</h4><p>WFH</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary"><i class="fas fa-calendar-check"></i></div>
+                        <div class="stat-info"><h4 id="statLeave">12</h4><p>Sisa Cuti</p></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
