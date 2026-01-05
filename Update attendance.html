@@ -1,0 +1,115 @@
+<!-- Tambahkan di bagian head -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+
+<!-- Update method-face section -->
+<div class="method-content" id="method-face">
+    <div class="card">
+        <h4><i class="fas fa-camera"></i> Absensi dengan Pengenalan Wajah</h4>
+        
+        <div class="camera-container">
+            <video id="cameraFeed" autoplay playsinline></video>
+            <canvas id="faceCanvas" class="face-overlay"></canvas>
+            <canvas id="cameraCanvas" style="display:none;"></canvas>
+        </div>
+        
+        <div id="faceStatus" class="face-status">
+            Klik "Mulai Kamera" untuk memulai
+        </div>
+        
+        <div class="camera-controls">
+            <button class="btn btn-primary" id="btnStartCamera" onclick="initFaceCamera()">
+                <i class="fas fa-video"></i>
+                Mulai Kamera
+            </button>
+            <button class="btn btn-success btn-lg" id="btnCapture" onclick="captureFaceAndAttend()" style="display:none;">
+                <i class="fas fa-camera"></i>
+                Ambil Foto & Absen
+            </button>
+            <button class="btn btn-outline" id="btnStopCamera" onclick="stopFaceCamera()" style="display:none;">
+                <i class="fas fa-times"></i>
+                Tutup
+            </button>
+        </div>
+        
+        <div class="face-tips">
+            <h5><i class="fas fa-lightbulb"></i> Tips untuk hasil terbaik:</h5>
+            <ul>
+                <li>Pastikan pencahayaan cukup terang</li>
+                <li>Posisikan wajah di tengah lingkaran panduan</li>
+                <li>Lepas kacamata hitam atau masker</li>
+                <li>Jangan bergerak saat verifikasi</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- CSS tambahan untuk face detection -->
+<style>
+.camera-container {
+    position: relative;
+    max-width: 480px;
+    margin: 0 auto 20px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: #000;
+}
+
+.camera-container video {
+    width: 100%;
+    display: block;
+}
+
+.face-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.face-status {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: var(--border-radius-sm);
+    background: var(--gray-100);
+}
+
+.face-status.status-success {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.face-status.status-warning {
+    background: var(--warning-light);
+    color: #b45309;
+}
+
+.face-tips {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--gray-50);
+    border-radius: var(--border-radius-sm);
+}
+
+.face-tips h5 {
+    margin-bottom: 10px;
+    color: var(--gray-700);
+}
+
+.face-tips ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--gray-600);
+}
+
+.face-tips li {
+    margin-bottom: 5px;
+}
+</style>
+
+<!-- Load scripts -->
+<script src="js/face-detection.js"></script>
+<script src="js/geolocation-advanced.js"></script>
